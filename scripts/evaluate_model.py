@@ -1,7 +1,9 @@
 import os
 import pandas as pd
+import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error, explained_variance_score
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from sklearn.model_selection import cross_val_score
 import joblib
 import argparse
 
@@ -14,7 +16,7 @@ def evaluate_linear_regression_model(data_folder, model_folder):
         data_folder (str): Path to the folder containing CSV files of the datasets.
         model_folder (str): Path to the folder containing trained models.
     """
-    results = []
+    evaluation_results = []
     for model_filename in os.listdir(model_folder):
         if model_filename.endswith('_model.pkl'):
             model_path = os.path.join(model_folder, model_filename)
@@ -43,21 +45,32 @@ def evaluate_linear_regression_model(data_folder, model_folder):
 
             # Calculate evaluation metrics
             mse = mean_squared_error(y_test, y_pred)
+            rmse = np.sqrt(mse)
+
+            # Calculating Adjusted R-squared
             r2 = r2_score(y_test, y_pred)
+            # Number of observations is the shape along axis 0
+            n = X_test.shape[0]
+            # Number of features (predictors, p) is the shape along axis 1
+            p = X_test.shape[1]
+            # Adjusted R-squared formula
+            adjusted_r2 = 1-(1-r2)*(n-1)/(n-p-1)
+
             mae = mean_absolute_error(y_test, y_pred)
-            rmse = mean_squared_error(y_test, y_pred, squared=False)
-            explained_variance = explained_variance_score(y_test, y_pred)
+            cv_score = cross_val_score(
+                estimator=model, X=X_train, y=y_train, cv=10).mean()
 
-
-            results.append({
-                "Model": model_name,
-                "MSE":mse,
-                "r2":r2,
-                "rmse":rmse,
-                "v_score":explained_variance
+            evaluation_results.append({
+                "Model": f"{model_filename}",
+                "MSE": mse,
+                "RMSE": rmse,
+                "MAE": mae,
+                "r2": r2,
+                "adjusted_r2": adjusted_r2,
+                "cv_score": cv_score
             })
-    df_eval = pd.DataFrame(results)
-    print(df_eval)
+    df_eval = pd.DataFrame(evaluation_results)
+    print(df_eval.round(4))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
