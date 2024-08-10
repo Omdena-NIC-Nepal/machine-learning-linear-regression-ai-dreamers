@@ -30,8 +30,9 @@ def evaluate_linear_regression_model(data_folder, model_folder):
             data = pd.read_csv(data_path)
 
             # Define features (X) and target (y)
-            X = data.drop(columns=["medv"])
-            y = data["medv"]
+            target = "log_medv" if "log_medv" in data.columns else "medv"
+            X = data.drop(columns=[target])
+            y = data[target]
 
             # Split the dataset into training and test sets
             X_train, X_test, y_train, y_test = train_test_split(
